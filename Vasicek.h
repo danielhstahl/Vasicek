@@ -75,7 +75,7 @@ namespace vasicek{
     /**This is the expectation of the integral of the O-U process Z; see http://danielhstahl.com/static/media/CreditRiskExtensions.143b963f.pdf
     Long run expectation is one
     */
-    template<typename Index, typename Array, typename Alpha, typename Tau>
+    template<typename Index, typename Array, typename Tau>
     auto computeIntegralExpectationLongRunOne(const Array& y0, const Array& alpha, const Index& sizeOfY0, const Tau& tau){
         return computeIntegralExpectationLongRunOne(y0, alpha, sizeOfY0, tau, [](const auto& val){
             return val;
