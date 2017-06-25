@@ -69,7 +69,7 @@ namespace vasicek{
     template<typename GetElement, typename Index, typename Array, typename Tau>
     auto computeIntegralExpectationLongRunOne(const Array& y0, const Array& alpha, const Index& sizeOfY0, const Tau& tau, const GetElement& getElement){
         return futilities::for_each_parallel(0, (int)sizeOfY0, [&](const auto& index){
-            return (getElement(y0[index])-1)*helpComputeMoments(getElement(alpha[index]), tau)+tau;
+            return (getElement(y0[index])-1.0)*helpComputeMoments(getElement(alpha[index]), tau)+tau;
         });
     }
     /**This is the expectation of the integral of the O-U process Z; see http://danielhstahl.com/static/media/CreditRiskExtensions.143b963f.pdf
@@ -87,12 +87,19 @@ namespace vasicek{
     Computes the variance/covariance of the integral of a multivariate vasicek process; see http://danielhstahl.com/static/media/CreditRiskExtensions.143b963f.pdf
     */
     template<typename GetElement,typename Get2dElement, typename Array, typename Array2d, typename Tau, typename Index>
-    auto computeIntegralVarianceVasicek(const Array& alpha, const Array& sigma, const Array2d& rho, const Index& sizeOfY0, const Tau& tau, const GetElement& getElement, const Get2dElement& get2dElement){
+    auto computeIntegralVarianceVasicek(const Array& alpha, const Array& sigma, Array2d&& rho, const Index& sizeOfY0, const Tau& tau, const GetElement& getElement, const Get2dElement& get2dElement){
         return futilities::for_each_parallel(0, (int)sizeOfY0, [&](const auto& indexI){
             auto ai=helpComputeMoments(getElement(alpha[indexI]), tau);
-            return futilities::for_each_parallel(0, (int)sizeOfY0, [&](const auto& indexJ){
-                auto aj=helpComputeMoments(getElement(alpha[indexJ]), tau);
-                return crossMultiply(get2dElement(indexI, indexJ, rho), getElement(sigma[indexI]), getElement(sigma[indexJ]), getElement(alpha[indexI]), getElement(alpha[indexJ]))*(tau-ai-aj+helpComputeMoments(getElement(alpha[indexI])+getElement(alpha[indexJ]), tau));
+            return futilities::for_each_parallel(0, (int)sizeOfY0, 
+                [&](const auto& indexJ){
+                    auto aj=helpComputeMoments(getElement(alpha[indexJ]), tau);
+                    return crossMultiply(
+                        get2dElement(indexI, indexJ, rho), 
+                        getElement(sigma[indexI]), 
+                        getElement(sigma[indexJ]), 
+                        getElement(alpha[indexI]), 
+                        getElement(alpha[indexJ])
+                    )*(tau-ai-aj+helpComputeMoments(getElement(alpha[indexI])+getElement(alpha[indexJ]), tau));
             });
         });
     }
@@ -126,11 +133,11 @@ namespace vasicek{
     auto getLogVasicekMFGFn(const std::vector<Expectation>& expectation , const std::vector< std::vector<Variance> >& variance){
         int m=expectation.size();
         return [m, &expectation, &variance](const auto& v){ //ocnst std::vector<std::complex<Number> > &v, 
-            return futilities::sum(0, m, [&](const auto& index){
-                return v[index]*expectation[index];
-            })+futilities::sum(0, m, [&](const auto& indexI){
-                return futilities::sum(0, m, [&](const auto& indexJ){
-                    return v[indexI]*v[indexJ]*variance[indexI][indexJ];
+            return futilities::sum(expectation, [&](const auto& expincr,const auto& index){
+                return v[index]*expincr;
+            })+futilities::sum(variance, [&](const auto& varianceincr, const auto& indexI){
+                return futilities::sum(varianceincr, [&](const auto& subVarianceincr, const auto& indexJ){
+                    return v[indexI]*v[indexJ]*subVarianceincr;
                 });
             })*.5;
         };
