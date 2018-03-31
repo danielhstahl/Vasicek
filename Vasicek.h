@@ -130,9 +130,8 @@ namespace vasicek{
 
     /**Computes the expectation of a the exponential of a weighted combination of the multidemensional integrated vasicek process*/
     template<typename Expectation, typename Variance>
-    auto getLogVasicekMFGFn(const std::vector<Expectation>& expectation , const std::vector< std::vector<Variance> >& variance){
-        int m=expectation.size();
-        return [m, &expectation, &variance](const auto& v){ //ocnst std::vector<std::complex<Number> > &v, 
+    auto getLogVasicekMFGFn(std::vector<Expectation>&& expectationtmp, std::vector< std::vector<Variance> >&& variancetmp){
+        return [expectation=std::move(expectationtmp), variance=std::move(variancetmp)](const auto& v){ //ocnst std::vector<std::complex<Number> > &v, 
             return futilities::sum(expectation, [&](const auto& expincr,const auto& index){
                 return v[index]*expincr;
             })+futilities::sum(variance, [&](const auto& varianceincr, const auto& indexI){
@@ -144,9 +143,8 @@ namespace vasicek{
     }
     /**Computes the expectation of a the exponential of a weighted combination of the multidemensional integrated vasicek process*/
     template<typename Expectation, typename Variance>
-    auto getVasicekMFGFn(const std::vector<Expectation>& expectation , const std::vector< std::vector<Variance> >& variance){
-        int m=expectation.size();
-        return [m, &expectation, &variance](const auto& v){
+    auto getVasicekMFGFn(std::vector<Expectation>&& expectationtmp, std::vector< std::vector<Variance> >&& variancetmp){
+        return [expectation=std::move(expectationtmp), variance=std::move(variancetmp)](const auto& v){
             return exp(getLogVasicekMFGFn(expectation, variance)(v));
         };
     }
